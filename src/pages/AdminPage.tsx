@@ -1,8 +1,6 @@
 import { useAction, useMutation, useQuery } from "convex/react";
 import {
-  ArrowDown,
   ArrowLeft,
-  ArrowUp,
   Calendar,
   Check,
   ChevronDown,
