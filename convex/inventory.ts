@@ -69,11 +69,9 @@ export const syncInventory = mutation({
     let updated = 0;
 
     for (const item of items) {
-      // Auto-detect hay spike from title (e.g. "Hay Bed", "Hay Spike")
-      const hasHaySpike = /hay/i.test(item.title);
-
       const ex = byUrl.get(item.url);
       if (ex) {
+        // Update existing item — do NOT overwrite hasHaySpike (preserve manual overrides)
         await ctx.db.patch(ex._id, {
           title: item.title,
           price: item.price,
@@ -86,15 +84,18 @@ export const syncInventory = mutation({
           model: item.model,
           imageUrl: item.imageUrl,
           fitmentTags: item.fitmentTags,
-          hasHaySpike,
           status: "in_stock",
           lastSynced: now,
         });
         updated++;
       } else {
+        // New item — auto-detect hay spike and trough from title for initial value only
+        const hasHaySpike = /\bhay\b/i.test(item.title);
+        const hasTrough = /\btrough\b/i.test(item.title);
         await ctx.db.insert("inventory", {
           ...item,
           hasHaySpike,
+          hasTrough,
           status: "in_stock",
           lastSynced: now,
         });
@@ -154,5 +155,44 @@ export const backfillHaySpike = mutation({
       }
     }
     return { updated, total: all.length };
+  },
+});
+
+/** Update image gallery for an inventory item */
+export const updateImageGallery = mutation({
+  args: {
+    id: v.id("inventory"),
+    imageUrls: v.array(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, { imageUrls: args.imageUrls });
+    return null;
+  },
+});
+
+/** Set hasHaySpike flag for a specific item */
+export const setHaySpike = mutation({
+  args: {
+    id: v.id("inventory"),
+    hasHaySpike: v.boolean(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, { hasHaySpike: args.hasHaySpike });
+    return null;
+  },
+});
+
+/** Set hasTrough flag for a specific item */
+export const setTrough = mutation({
+  args: {
+    id: v.id("inventory"),
+    hasTrough: v.boolean(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, { hasTrough: args.hasTrough });
+    return null;
   },
 });

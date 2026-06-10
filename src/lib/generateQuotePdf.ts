@@ -30,6 +30,8 @@ export interface QuotePdfOptions {
   estimateNumber: string;
   date: string;
   customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
   customerAddress?: string;
   items: QuotePdfItem[];
   subtotal: number;
@@ -147,9 +149,25 @@ export function generateQuotePdf(opts: QuotePdfOptions): jsPDF {
 
   doc.setFont("helvetica", "normal");
   if (opts.customerName) {
+    doc.setFont("helvetica", "bold");
     doc.text(opts.customerName, margin, y);
+    doc.setFont("helvetica", "normal");
     y += 14;
+    if (opts.customerPhone) {
+      doc.setFontSize(9);
+      doc.setTextColor(GRAY);
+      doc.text(opts.customerPhone, margin, y);
+      y += 12;
+    }
+    if (opts.customerEmail) {
+      doc.setFontSize(9);
+      doc.setTextColor(GRAY);
+      doc.text(opts.customerEmail, margin, y);
+      y += 12;
+    }
     if (opts.customerAddress) {
+      doc.setFontSize(10);
+      doc.setTextColor(DARK);
       const addrLines = opts.customerAddress.split("\n");
       for (const line of addrLines) {
         doc.text(line, margin, y);

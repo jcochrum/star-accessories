@@ -1,4 +1,4 @@
-import { internalMutation, mutation } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 export const updateLaborRate = mutation({
@@ -47,5 +47,33 @@ export const bulkSetImages = internalMutation({
       }
     }
     return null;
+  },
+});
+
+export const upsert = mutation({
+  args: { key: v.string(), value: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("settings")
+      .withIndex("by_key", (q) => q.eq("key", args.key))
+      .unique();
+    if (existing) {
+      await ctx.db.patch(existing._id, { value: args.value });
+    } else {
+      await ctx.db.insert("settings", { key: args.key, value: args.value });
+    }
+    return null;
+  },
+});
+
+export const get = query({
+  args: { key: v.string() },
+  handler: async (ctx, args) => {
+    const setting = await ctx.db
+      .query("settings")
+      .withIndex("by_key", (q) => q.eq("key", args.key))
+      .unique();
+    return setting?.value ?? null;
   },
 });

@@ -21,7 +21,24 @@ const schema = defineSchema({
     notes: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
     fitmentMakes: v.optional(v.array(v.string())),  // e.g. ["Ford", "Ram"] — if set, only shown for matching truck. Empty/undefined = universal.
+    fitment: v.optional(v.array(v.object({           // Detailed fitment per make
+      make: v.string(),                               // "Ford", "Ram", "Chevy / GMC"
+      models: v.array(v.string()),                    // ["F250", "F350", "F450", "F550"]
+      cabTypes: v.array(v.string()),                  // ["Single Cab", "Extended Cab", "Crew Cab"]
+    }))),
+    fitmentCabTypes: v.optional(v.array(v.string())), // Universal cab types (independent of make): ["Single Cab", "Extended Cab", "Crew Cab", "Mega Cab"]
     sortOrder: v.number(),
+    priceUpdatedAt: v.optional(v.number()),    // Timestamp of last price change
+    priceUpdatedBy: v.optional(v.string()),    // Who updated: "Viktor", admin name, etc.
+    isVisible: v.optional(v.boolean()),        // false = hidden from customer-facing tool. Default (undefined/true) = visible
+    images: v.optional(v.array(v.object({      // Multiple product images
+      url: v.string(),
+      isPrimary: v.optional(v.boolean()),      // true = shown first / as thumbnail
+      caption: v.optional(v.string()),
+      make: v.optional(v.string()),            // "Ford", "Ram", "Chevy / GMC" — if set, only shown when customer selects this make. undefined = universal
+    }))),
+    productFamily: v.optional(v.string()),     // Group key for customer display. Items sharing the same productFamily+category show as ONE card (e.g. "Ranch Hand Legend")
+    compatibleCALengths: v.optional(v.array(v.string())),  // e.g. ["38", "40", "42"] — CA lengths this accessory fits (used for underbody boxes)
   })
     .index("by_category", ["category", "sortOrder"])
     .index("by_brand", ["brand"])
@@ -51,6 +68,38 @@ const schema = defineSchema({
     notes: v.optional(v.string()),
     createdBy: v.optional(v.string()),    // salesperson name
     status: v.string(),                    // "draft" | "sent" | "accepted" | "expired"
+    // Deposit & scheduling fields
+    depositStatus: v.optional(v.string()),   // "none" | "pending" | "paid" | "refunded"
+    depositAmount: v.optional(v.number()),   // 500 (cents: 50000)
+    depositPaidAt: v.optional(v.number()),   // timestamp
+    stripeSessionId: v.optional(v.string()), // Stripe Checkout Session ID
+    stripePaymentIntentId: v.optional(v.string()), // For refund reference
+    scheduledDate: v.optional(v.string()),   // ISO date string e.g. "2026-06-15"
+    customerAcceptedAt: v.optional(v.number()), // timestamp when customer accepted
+    // Override fields — when team manually schedules without deposit
+    overrideBy: v.optional(v.string()),      // Team member name who overrode
+    overrideReason: v.optional(v.string()),  // Why deposit was waived
+    overrideAt: v.optional(v.number()),      // Timestamp of override
+    // Notification tracking
+    depositNotificationSent: v.optional(v.boolean()),  // email sent to salesperson?
+    reminderSent: v.optional(v.boolean()),              // day-before email reminder sent?
+    reminderSmsSent: v.optional(v.boolean()),           // 1-day-before SMS reminder sent?
+    reminder2DaySmsSent: v.optional(v.boolean()),       // 2-day-before SMS reminder sent?
+    reminder2DaySmsAt: v.optional(v.number()),          // timestamp when 2-day SMS was sent (for RC reply check)
+    isCustomOrder: v.optional(v.boolean()),             // true when customer requested item not in stock
+    // CRM fields
+    pipelineStage: v.optional(v.string()),  // "new" | "contacted" | "quoted" | "scheduled" | "completed" | "lost"
+    assignedTo: v.optional(v.string()),     // salesperson name
+    lostReason: v.optional(v.string()),     // reason for lost deal
+    followUpDate: v.optional(v.string()),   // ISO date for next follow-up
+    lastContactedAt: v.optional(v.number()), // timestamp
+    activityLog: v.optional(v.array(v.object({
+      timestamp: v.number(),
+      action: v.string(),      // "note" | "call" | "email" | "text" | "status_change" | "assigned"
+      by: v.string(),          // who performed the action
+      detail: v.string(),      // note text or description
+    }))),
+    jobType: v.optional(v.string()),        // "waiter" | "drop-off"
   })
     .index("by_slug", ["slug"])
     .index("by_status", ["status"]),
@@ -67,8 +116,11 @@ const schema = defineSchema({
     brand: v.optional(v.string()),  // Bedrock, CM, Pronghorn, etc.
     model: v.optional(v.string()),  // Granite, Marble, SK, etc.
     imageUrl: v.optional(v.string()),
+    imageUrls: v.optional(v.array(v.string())),    // All product images (scraped from product page)
     fitmentTags: v.optional(v.array(v.string())),  // e.g. ["FD20C", "FD1719"] - truck fitment tags
     hasHaySpike: v.optional(v.boolean()),  // Auto-detected from title containing "hay"
+    hasTrough: v.optional(v.boolean()),    // Auto-detected from title containing "trough"
+    description: v.optional(v.string()),   // Dealer notes / specs scraped from website
     status: v.string(),             // "in_stock" | "pending" | "sold"
     lastSynced: v.number(),         // Timestamp of last scrape
   })
