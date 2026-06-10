@@ -14,6 +14,7 @@ import {
   EyeOff,
   Filter,
   KeyRound,
+  GripVertical,
   Layers,
   Lock,
   Mail,
@@ -1247,7 +1248,7 @@ const TEAM_MEMBERS = [
   { name: "Justin Juarez", email: "justin.juarez@startruckequipment.com" },
 ];
 
-/* ──────────────────── CATEGORY ORDER PANEL ──────────────────── */
+/* ──────────────────── CATEGORY ORDER PANEL (drag & drop) ──────────────────── */
 function CategoryOrderPanel({
   categories,
   savedOrder,
@@ -1257,7 +1258,6 @@ function CategoryOrderPanel({
   savedOrder: string[];
   onSave: (order: string[]) => void;
 }) {
-  // Build the display list: start with saved order, then append any new categories
   const buildOrderList = () => {
     const ordered: string[] = [];
     for (const c of savedOrder) {
@@ -1270,26 +1270,37 @@ function CategoryOrderPanel({
   };
 
   const [order, setOrder] = useState(buildOrderList);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [overIdx, setOverIdx] = useState<number | null>(null);
 
-  // Update when categories or savedOrder change
   useEffect(() => {
     setOrder(buildOrderList());
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categories.join(","), savedOrder.join(",")]);
 
-  const moveUp = (idx: number) => {
-    if (idx === 0) return;
-    const next = [...order];
-    [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
-    setOrder(next);
+  const handleDragStart = (idx: number) => (e: React.DragEvent) => {
+    setDragIdx(idx);
+    e.dataTransfer.effectAllowed = "move";
   };
 
-  const moveDown = (idx: number) => {
-    if (idx === order.length - 1) return;
-    const next = [...order];
-    [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
-    setOrder(next);
+  const handleDragOver = (idx: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setOverIdx(idx);
   };
+
+  const handleDrop = (idx: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    if (dragIdx === null || dragIdx === idx) { setDragIdx(null); setOverIdx(null); return; }
+    const next = [...order];
+    const [moved] = next.splice(dragIdx, 1);
+    next.splice(idx, 0, moved);
+    setOrder(next);
+    setDragIdx(null);
+    setOverIdx(null);
+  };
+
+  const handleDragEnd = () => { setDragIdx(null); setOverIdx(null); };
 
   const hasChanges = JSON.stringify(order) !== JSON.stringify(buildOrderList());
 
@@ -1298,34 +1309,28 @@ function CategoryOrderPanel({
       <div className="flex items-center gap-2 mb-4">
         <Layers className="w-5 h-5 text-slate-600" />
         <h3 className="font-semibold text-slate-900">Category Display Order</h3>
-        <span className="text-xs text-slate-400 ml-auto">This controls the order on the customer quote builder</span>
+        <span className="text-xs text-slate-400 ml-auto">Drag to reorder — this controls the customer quote builder</span>
       </div>
       <div className="space-y-1">
         {order.map((cat, idx) => (
           <div
             key={cat}
-            className="flex items-center gap-3 bg-slate-50 hover:bg-slate-100 rounded-lg px-4 py-2.5 transition group"
+            draggable
+            onDragStart={handleDragStart(idx)}
+            onDragOver={handleDragOver(idx)}
+            onDrop={handleDrop(idx)}
+            onDragEnd={handleDragEnd}
+            className={`flex items-center gap-3 rounded-lg px-4 py-2.5 transition cursor-grab active:cursor-grabbing select-none ${
+              dragIdx === idx
+                ? "opacity-40 bg-blue-50 border border-blue-200"
+                : overIdx === idx && dragIdx !== null
+                ? "bg-blue-50 border border-blue-300"
+                : "bg-slate-50 hover:bg-slate-100 border border-transparent"
+            }`}
           >
+            <GripVertical className="w-4 h-4 text-slate-300 shrink-0" />
             <span className="text-sm font-mono text-slate-400 w-6 text-right">{idx + 1}</span>
             <span className="text-sm font-medium text-slate-800 flex-1">{cat}</span>
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-              <button
-                onClick={() => moveUp(idx)}
-                disabled={idx === 0}
-                className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed"
-                title="Move up"
-              >
-                <ArrowUp className="w-4 h-4 text-slate-500" />
-              </button>
-              <button
-                onClick={() => moveDown(idx)}
-                disabled={idx === order.length - 1}
-                className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed"
-                title="Move down"
-              >
-                <ArrowDown className="w-4 h-4 text-slate-500" />
-              </button>
-            </div>
           </div>
         ))}
       </div>
