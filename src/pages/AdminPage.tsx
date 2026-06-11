@@ -1091,6 +1091,7 @@ function CategorySection({
   onAdd,
   onToggleVisibility,
   onDuplicate,
+  onReorder,
   isCategoryHidden,
   onToggleCategoryVisibility,
   onRenameCategory,
@@ -1105,6 +1106,7 @@ function CategorySection({
   onAdd: (fields: Record<string, unknown>) => void;
   onToggleVisibility: (id: Id<"accessories">, visible: boolean) => void;
   onDuplicate: (item: Accessory) => void;
+  onReorder: (itemIds: string[]) => void;
   isCategoryHidden: boolean;
   onToggleCategoryVisibility: (category: string) => void;
   onRenameCategory: (oldName: string, newName: string) => void;
@@ -1114,11 +1116,35 @@ function CategorySection({
   const [showAddForm, setShowAddForm] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(name);
+  const [dragItemIdx, setDragItemIdx] = useState<number | null>(null);
+  const [overItemIdx, setOverItemIdx] = useState<number | null>(null);
 
   const sorted = useMemo(
     () => [...items].sort((a, b) => a.sortOrder - b.sortOrder),
     [items]
   );
+
+  const handleItemDragStart = (idx: number) => (e: React.DragEvent) => {
+    setDragItemIdx(idx);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(idx));
+  };
+  const handleItemDragOver = (idx: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setOverItemIdx(idx);
+  };
+  const handleItemDrop = (idx: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    if (dragItemIdx === null || dragItemIdx === idx) { setDragItemIdx(null); setOverItemIdx(null); return; }
+    const next = [...sorted];
+    const [moved] = next.splice(dragItemIdx, 1);
+    next.splice(idx, 0, moved);
+    onReorder(next.map((it) => it._id));
+    setDragItemIdx(null);
+    setOverItemIdx(null);
+  };
+  const handleItemDragEnd = () => { setDragItemIdx(null); setOverItemIdx(null); };
 
   const liveCount = items.filter((i) => i.isVisible !== false).length;
   const hiddenCount = items.length - liveCount;
@@ -1201,16 +1227,36 @@ function CategorySection({
 
       {isExpanded && (
         <div className="border-t border-slate-100 p-4 space-y-2">
-          {sorted.map((item) => (
-            <EditableRow
+          {sorted.map((item, idx) => (
+            <div
               key={item._id}
-              item={item}
-              defaultMarkup={defaultMarkup}
-              onSave={onSave}
-              onDelete={onDelete}
-              onToggleVisibility={onToggleVisibility}
-              onDuplicate={onDuplicate}
-            />
+              draggable
+              onDragStart={handleItemDragStart(idx)}
+              onDragOver={handleItemDragOver(idx)}
+              onDrop={handleItemDrop(idx)}
+              onDragEnd={handleItemDragEnd}
+              className={`flex items-start gap-1 transition rounded-lg ${
+                dragItemIdx === idx
+                  ? "opacity-40 bg-blue-50 border border-blue-200"
+                  : overItemIdx === idx && dragItemIdx !== null
+                  ? "bg-blue-50 border border-blue-300"
+                  : "border border-transparent"
+              }`}
+            >
+              <div className="pt-6 px-1 cursor-grab active:cursor-grabbing shrink-0 text-slate-300 hover:text-slate-500">
+                <GripVertical className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <EditableRow
+                  item={item}
+                  defaultMarkup={defaultMarkup}
+                  onSave={onSave}
+                  onDelete={onDelete}
+                  onToggleVisibility={onToggleVisibility}
+                  onDuplicate={onDuplicate}
+                />
+              </div>
+            </div>
           ))}
 
           {showAddForm ? (
@@ -1980,6 +2026,7 @@ export function AdminPage() {
   const hiddenCategories = useQuery(api.admin.getHiddenCategories) ?? [];
   const toggleCategoryVisibilityMut = useMutation(api.admin.toggleCategoryVisibility);
   const renameCategoryMut = useMutation(api.admin.renameCategory);
+  const reorderItemsMut = useMutation(api.admin.reorderItems);
   const categoryOrder = useQuery(api.admin.getCategoryOrder) ?? [];
   const setCategoryOrderMut = useMutation(api.admin.setCategoryOrder);
 
@@ -2122,6 +2169,14 @@ export function AdminPage() {
       toast.success(`Renamed "${oldName}" → "${result?.newName ?? newName}" (${result?.updated ?? 0} items updated)`);
     } catch {
       toast.error("Failed to rename category");
+    }
+  };
+
+  const handleReorderItems = async (itemIds: string[]) => {
+    try {
+      await reorderItemsMut({ itemIds: itemIds as Id<"accessories">[] });
+    } catch {
+      toast.error("Failed to reorder items");
     }
   };
 
@@ -2364,6 +2419,7 @@ export function AdminPage() {
                 onAdd={handleAdd}
                 onToggleVisibility={handleToggleVisibility}
                 onDuplicate={handleDuplicate}
+                onReorder={handleReorderItems}
                 isCategoryHidden={hiddenCategories.includes(cat)}
                 onToggleCategoryVisibility={handleToggleCategoryVisibility}
                 onRenameCategory={handleRenameCategory}

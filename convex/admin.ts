@@ -474,3 +474,14 @@ export const getStorageUrl = query({
     return await ctx.storage.getUrl(storageId);
   },
 });
+
+// Reorder items within a category — receives an array of item IDs in desired order
+export const reorderItems = mutation({
+  args: { itemIds: v.array(v.id("accessories")) },
+  handler: async (ctx, { itemIds }) => {
+    for (let i = 0; i < itemIds.length; i++) {
+      await ctx.db.patch(itemIds[i], { sortOrder: i });
+    }
+    return { updated: itemIds.length };
+  },
+});
