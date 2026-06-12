@@ -2948,6 +2948,8 @@ export function SalesToolPage({ staffMode = false }: { staffMode?: boolean } = {
   const [underbodySidePromptOpen, setUnderbodySidePromptOpen] = useState(false);
   const [pendingUnderbodyItem, setPendingUnderbodyItem] = useState<Accessory | null>(null);
   const [filterKitPumpBrand, setFilterKitPumpBrand] = useState<string | null>(null);
+  const [dupTankConfirmOpen, setDupTankConfirmOpen] = useState(false);
+  const [pendingDupTankItem, setPendingDupTankItem] = useState<Accessory | null>(null);
   const [quoteRequested, setQuoteRequested] = useState(false);
 
   // ── Customer info ──
@@ -3029,7 +3031,7 @@ export function SalesToolPage({ staffMode = false }: { staffMode?: boolean } = {
   }, []);
 
   // Categories that trigger the "add a transfer pump?" prompt
-  const FUEL_CATEGORIES = new Set(["Transfer Tanks", "Tank/Toolbox Combos"]);
+  const FUEL_CATEGORIES = new Set(["Transfer Tanks", "Tank/Toolbox Combos", "Toolbox/Fuel Tank Combos"]);
 
   const addUnderbodyToQuote = useCallback((item: Accessory, side: "driver" | "passenger" | "both") => {
     setQuoteItems((prev) => {
@@ -3070,6 +3072,17 @@ export function SalesToolPage({ staffMode = false }: { staffMode?: boolean } = {
   }, []);
 
   const addToQuote = useCallback((item: Accessory) => {
+    // Duplicate fuel tank / combo warning
+    const TANK_CATS = new Set(["Transfer Tanks", "Tank/Toolbox Combos", "Toolbox/Fuel Tank Combos"]);
+    if (TANK_CATS.has(item.category)) {
+      const existingTank = quoteItems.find((qi) => TANK_CATS.has(qi.accessory.category));
+      if (existingTank) {
+        setPendingDupTankItem(item);
+        setDupTankConfirmOpen(true);
+        return;
+      }
+    }
+
     // Underbody boxes (items with CA lengths) — prompt for side selection
     if (item.compatibleCALengths && item.compatibleCALengths.length > 0) {
       // Check if already at max (any items with CA lengths = underbody-style)
@@ -3124,7 +3137,7 @@ export function SalesToolPage({ staffMode = false }: { staffMode?: boolean } = {
     if (item.category === "Transfer Pumps") {
       setQuoteItems((current) => {
         const hasTank = current.some((qi) =>
-          qi.accessory.category === "Transfer Tanks" || qi.accessory.category === "Tank/Toolbox Combos"
+          qi.accessory.category === "Transfer Tanks" || qi.accessory.category === "Tank/Toolbox Combos" || qi.accessory.category === "Toolbox/Fuel Tank Combos"
         );
         if (!hasTank) setTankPromptOpen(true);
         return current; // no mutation
@@ -3658,7 +3671,7 @@ export function SalesToolPage({ staffMode = false }: { staffMode?: boolean } = {
       {/* Tank prompt — shown when adding a transfer pump */}
       {tankPromptOpen && (() => {
         const tanks = (allAccessories ?? [])
-          .filter((a: Accessory) => a.category === "Transfer Tanks" || a.category === "Tank/Toolbox Combos")
+          .filter((a: Accessory) => a.category === "Transfer Tanks" || a.category === "Tank/Toolbox Combos" || a.category === "Toolbox/Fuel Tank Combos")
           .filter((a: Accessory) => {
             const sell = a.sellPrice ?? Math.round(a.cost * (1 + markup / 100));
             return sell > 0;
@@ -3856,6 +3869,59 @@ export function SalesToolPage({ staffMode = false }: { staffMode?: boolean } = {
               </button>
             </div>
           </div>
+        );
+      })()}
+
+      {/* Duplicate fuel tank / combo confirmation */}
+      {dupTankConfirmOpen && pendingDupTankItem && (() => {
+        const existingTank = quoteItems.find((qi) => {
+          const TANK_CATS = new Set(["Transfer Tanks", "Tank/Toolbox Combos", "Toolbox/Fuel Tank Combos"]);
+          return TANK_CATS.has(qi.accessory.category);
+        });
+        return (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4"
+             onClick={() => { setDupTankConfirmOpen(false); setPendingDupTankItem(null); }}>
+          <div className="bg-card rounded-t-2xl sm:rounded-2xl w-full max-w-md p-6 space-y-4"
+               onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold">⚠️ You already have a fuel tank</h3>
+            <p className="text-sm text-muted-foreground">
+              You already have <strong>{existingTank?.accessory.brand} {existingTank?.accessory.series}</strong> in your quote.
+              Are you sure you want to add <strong>{pendingDupTankItem.brand} {pendingDupTankItem.series}</strong> as well?
+            </p>
+            <div className="flex gap-3">
+              <button
+                className="flex-1 p-3 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90"
+                onClick={() => {
+                  // Bypass the duplicate check by directly adding
+                  setQuoteItems((prev) => {
+                    const existing = prev.find((qi) => qi.accessory._id === pendingDupTankItem._id);
+                    if (existing) {
+                      return prev.map((qi) =>
+                        qi.accessory._id === pendingDupTankItem._id
+                          ? { ...qi, quantity: qi.quantity + 1 }
+                          : qi
+                      );
+                    }
+                    return [...prev, { accessory: pendingDupTankItem, quantity: 1 }];
+                  });
+                  toast.success("Added to quote");
+                  // Still trigger pump prompt for the new tank
+                  setPumpPromptOpen(true);
+                  setDupTankConfirmOpen(false);
+                  setPendingDupTankItem(null);
+                }}
+              >
+                Yes, add it
+              </button>
+              <button
+                className="flex-1 p-3 rounded-lg border text-sm text-muted-foreground hover:bg-accent/50"
+                onClick={() => { setDupTankConfirmOpen(false); setPendingDupTankItem(null); }}
+              >
+                No, cancel
+              </button>
+            </div>
+          </div>
+        </div>
         );
       })()}
     </div>
