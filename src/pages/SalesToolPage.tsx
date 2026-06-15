@@ -112,6 +112,7 @@ type TruckConfig = {
   brandFilter?: string;      // Only show beds of this brand
   surcharges?: { label: string; amount: number }[];  // Auto-added line items
   caLength?: string;         // Cab-to-axle length (for filtering underbody toolboxes)
+  mediumDuty?: boolean;      // Medium duty truck — hides bumpers, restricts grille guards
 };
 type TruckMake = { label: string; icon: string; logo: string; logoImage?: string; LogoComponent?: React.ComponentType<{ className?: string }>; configs: TruckConfig[] };
 
@@ -139,8 +140,8 @@ const TRUCK_MAKES: TruckMake[] = [
       { label: 'F450 Cab & Chassis 60"', tag: "CCB60", caLength: "60" },
       { label: 'F450 Cab & Chassis 84"', tag: "CCB84", caLength: "84" },
       // ── F650 / F750 Medium Duty ──
-      { label: 'F650/F750 — 60" CA', tag: "CCB60", section: "F650 / F750 (Medium Duty)", brandFilter: "Bedrock", surcharges: MEDIUM_DUTY_SURCHARGE, caLength: "60" },
-      { label: 'F650/F750 — 84" CA', tag: "CCB84", brandFilter: "Bedrock", surcharges: MEDIUM_DUTY_SURCHARGE, caLength: "84" },
+      { label: 'F650/F750 — 60" CA', tag: "CCB60", section: "F650 / F750 (Medium Duty)", brandFilter: "Bedrock", surcharges: MEDIUM_DUTY_SURCHARGE, caLength: "60", mediumDuty: true },
+      { label: 'F650/F750 — 84" CA', tag: "CCB84", brandFilter: "Bedrock", surcharges: MEDIUM_DUTY_SURCHARGE, caLength: "84", mediumDuty: true },
     ],
   },
   {
@@ -158,8 +159,8 @@ const TRUCK_MAKES: TruckMake[] = [
       { label: "Mega Cab Dually", tag: "Rmega", caLength: "38" },
       { label: "SRW Short Bed", tag: "RSSB", caLength: "38" },
       // ── 4500 / 5500 Cab & Chassis ──
-      { label: '4500/5500 Cab & Chassis 60"', tag: "CCB60", section: "4500 / 5500", caLength: "60" },
-      { label: '4500/5500 Cab & Chassis 84"', tag: "CCB84", caLength: "84" },
+      { label: '4500/5500 Cab & Chassis 60"', tag: "CCB60", section: "4500 / 5500", caLength: "60", mediumDuty: true },
+      { label: '4500/5500 Cab & Chassis 84"', tag: "CCB84", caLength: "84", mediumDuty: true },
     ],
   },
   {
@@ -177,8 +178,8 @@ const TRUCK_MAKES: TruckMake[] = [
       { label: '3500 Cab & Chassis 60"', tag: "CCB60", section: "3500 Cab & Chassis", caLength: "60" },
       { label: '3500 Cab & Chassis 84"', tag: "CCB84", caLength: "84" },
       // ── 4500 / 5500 / 6500 Medium Duty ──
-      { label: '4500/5500/6500 — 60" CA', tag: "CCB60", section: "4500/5500/6500 (Medium Duty)", brandFilter: "Bedrock", surcharges: MEDIUM_DUTY_SURCHARGE, caLength: "60" },
-      { label: '4500/5500/6500 — 84" CA', tag: "CCB84", brandFilter: "Bedrock", surcharges: MEDIUM_DUTY_SURCHARGE, caLength: "84" },
+      { label: '4500/5500/6500 — 60" CA', tag: "CCB60", section: "4500/5500/6500 (Medium Duty)", brandFilter: "Bedrock", surcharges: MEDIUM_DUTY_SURCHARGE, caLength: "60", mediumDuty: true },
+      { label: '4500/5500/6500 — 84" CA', tag: "CCB84", brandFilter: "Bedrock", surcharges: MEDIUM_DUTY_SURCHARGE, caLength: "84", mediumDuty: true },
     ],
   },
   {
@@ -193,26 +194,26 @@ const TRUCK_MAKES: TruckMake[] = [
       { label: 'F450 — 84" CA', tag: "CCB84", caLength: "84" },
       { label: 'F550 — 60" CA', tag: "CCB60", caLength: "60" },
       { label: 'F550 — 84" CA', tag: "CCB84", caLength: "84" },
-      { label: 'F650 — 60" CA', tag: "CCB60", brandFilter: "Bedrock", surcharges: MEDIUM_DUTY_SURCHARGE, caLength: "60" },
-      { label: 'F650 — 84" CA', tag: "CCB84", brandFilter: "Bedrock", surcharges: MEDIUM_DUTY_SURCHARGE, caLength: "84" },
-      { label: 'F750 — 60" CA', tag: "CCB60", brandFilter: "Bedrock", surcharges: MEDIUM_DUTY_SURCHARGE, caLength: "60" },
-      { label: 'F750 — 84" CA', tag: "CCB84", brandFilter: "Bedrock", surcharges: MEDIUM_DUTY_SURCHARGE, caLength: "84" },
+      { label: 'F650 — 60" CA', tag: "CCB60", brandFilter: "Bedrock", surcharges: MEDIUM_DUTY_SURCHARGE, caLength: "60", mediumDuty: true },
+      { label: 'F650 — 84" CA', tag: "CCB84", brandFilter: "Bedrock", surcharges: MEDIUM_DUTY_SURCHARGE, caLength: "84", mediumDuty: true },
+      { label: 'F750 — 60" CA', tag: "CCB60", brandFilter: "Bedrock", surcharges: MEDIUM_DUTY_SURCHARGE, caLength: "60", mediumDuty: true },
+      { label: 'F750 — 84" CA', tag: "CCB84", brandFilter: "Bedrock", surcharges: MEDIUM_DUTY_SURCHARGE, caLength: "84", mediumDuty: true },
       // ── Ram ──
       { label: 'Ram 3500 — 60" CA', tag: "CCB60", section: "Ram", caLength: "60" },
       { label: 'Ram 3500 — 84" CA', tag: "CCB84", caLength: "84" },
-      { label: 'Ram 4500 — 60" CA', tag: "CCB60", caLength: "60" },
-      { label: 'Ram 4500 — 84" CA', tag: "CCB84", caLength: "84" },
-      { label: 'Ram 5500 — 60" CA', tag: "CCB60", caLength: "60" },
-      { label: 'Ram 5500 — 84" CA', tag: "CCB84", caLength: "84" },
+      { label: 'Ram 4500 — 60" CA', tag: "CCB60", caLength: "60", mediumDuty: true },
+      { label: 'Ram 4500 — 84" CA', tag: "CCB84", caLength: "84", mediumDuty: true },
+      { label: 'Ram 5500 — 60" CA', tag: "CCB60", caLength: "60", mediumDuty: true },
+      { label: 'Ram 5500 — 84" CA', tag: "CCB84", caLength: "84", mediumDuty: true },
       // ── Chevy / GMC ──
       { label: '3500 — 60" CA', tag: "CCB60", section: "Chevy / GMC", caLength: "60" },
       { label: '3500 — 84" CA', tag: "CCB84", caLength: "84" },
-      { label: '4500 — 60" CA', tag: "CCB60", brandFilter: "Bedrock", surcharges: MEDIUM_DUTY_SURCHARGE, caLength: "60" },
-      { label: '4500 — 84" CA', tag: "CCB84", brandFilter: "Bedrock", surcharges: MEDIUM_DUTY_SURCHARGE, caLength: "84" },
-      { label: '5500 — 60" CA', tag: "CCB60", brandFilter: "Bedrock", surcharges: MEDIUM_DUTY_SURCHARGE, caLength: "60" },
-      { label: '5500 — 84" CA', tag: "CCB84", brandFilter: "Bedrock", surcharges: MEDIUM_DUTY_SURCHARGE, caLength: "84" },
-      { label: '6500 — 60" CA', tag: "CCB60", brandFilter: "Bedrock", surcharges: MEDIUM_DUTY_SURCHARGE, caLength: "60" },
-      { label: '6500 — 84" CA', tag: "CCB84", brandFilter: "Bedrock", surcharges: MEDIUM_DUTY_SURCHARGE, caLength: "84" },
+      { label: '4500 — 60" CA', tag: "CCB60", brandFilter: "Bedrock", surcharges: MEDIUM_DUTY_SURCHARGE, caLength: "60", mediumDuty: true },
+      { label: '4500 — 84" CA', tag: "CCB84", brandFilter: "Bedrock", surcharges: MEDIUM_DUTY_SURCHARGE, caLength: "84", mediumDuty: true },
+      { label: '5500 — 60" CA', tag: "CCB60", brandFilter: "Bedrock", surcharges: MEDIUM_DUTY_SURCHARGE, caLength: "60", mediumDuty: true },
+      { label: '5500 — 84" CA', tag: "CCB84", brandFilter: "Bedrock", surcharges: MEDIUM_DUTY_SURCHARGE, caLength: "84", mediumDuty: true },
+      { label: '6500 — 60" CA', tag: "CCB60", brandFilter: "Bedrock", surcharges: MEDIUM_DUTY_SURCHARGE, caLength: "60", mediumDuty: true },
+      { label: '6500 — 84" CA', tag: "CCB84", brandFilter: "Bedrock", surcharges: MEDIUM_DUTY_SURCHARGE, caLength: "84", mediumDuty: true },
     ],
   },
 ];
@@ -2561,6 +2562,14 @@ function AccessoriesCatalog({
         (i) => !i.fitmentMakes || i.fitmentMakes.length === 0 || i.fitmentMakes.includes(selectedMakeLabel)
       );
     }
+    // Medium duty trucks — no replacement bumpers available; only GO Industries ET005 grille guard
+    if (truckConfig?.mediumDuty) {
+      items = items.filter((i) => {
+        if (i.category === "Front Bumper" || i.category === "Front Bumpers") return false;
+        if (i.category === "Grille Guards") return i.partNumber === "ET005";
+        return true;
+      });
+    }
     if (selectedCategory) {
       items = items.filter((i) => i.category === selectedCategory);
     }
@@ -2635,6 +2644,14 @@ function AccessoriesCatalog({
       items = items.filter(
         (i) => !i.fitmentMakes || i.fitmentMakes.length === 0 || i.fitmentMakes.includes(selectedMakeLabel)
       );
+    }
+    // Medium duty trucks — hide bumpers, restrict grille guards for category counts
+    if (truckConfig?.mediumDuty) {
+      items = items.filter((i) => {
+        if (i.category === "Front Bumper" || i.category === "Front Bumpers") return false;
+        if (i.category === "Grille Guards") return i.partNumber === "ET005";
+        return true;
+      });
     }
     // Filter toolboxes/side packs by CA length compatibility for category counts
     if (truckConfig?.caLength) {
